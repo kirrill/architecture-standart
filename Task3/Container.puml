@@ -1,0 +1,60 @@
+
+@startuml
+title title Диаграмма контекста: MVP для подачи заявки на депозит через сайт и интернет-банк
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Container.puml
+
+Person(client, "Клиент", "" )
+Person(dep_manager, "Сотрудник бэк-офиса", "Депозиты")
+Person(credit_manager, "Сотрудник бэк-офиса", "Кредитование")
+
+System_Boundary(ibank_system, "Интернет-банк") {
+
+    Container(ibank_balancer, "Балансировщик", "nginx/traefik", "Автоматически перенаправляет пользвотеля на работающий ЦОД")
+    Container(ibank, "Интернет-банк", "ASP.NET MVC 4.5", "Монолит")
+    Container(ibank_dep, "Сервис депозитов", "C# ", "Отвечает за работу с депозитами")
+    ContainerDb(ibank_dep_db, "БД депозиты", "MS SQL", "Хранение данных о депозитах и персональных ставках для пользователей")
+    ContainerDb(ibank_db, "БД монолита", "MS SQL", "Хранение пользовательских данных")
+}
+
+System_Boundary(abs_system, "АБС") {
+
+    Container(abs, "Десктопное приложение АБС", "Dephi", "Ведение данных о пользователях и состоянии их счетов")
+    ContainerDb(abs_db, "БД десктопа", "Oracle", "Хранение данных о пользователях и состоянии их счетов")
+
+    Container(abs_rate, "Сервис ведения ставок", "Java", "Ведение ставок по депозитам и кредитам")
+
+    ContainerDb(abs_rate_db, "База ставок", "Oracle", "Хранение актуальных ставок")
+
+}
+
+System(kafka, "Брокер сообщений", "Apache Kafka")
+System(sms, "SMS-сервис")
+
+
+
+Rel(client, ibank_balancer, "Просматривает депозиты, открывает депозит онлайн")
+Rel(ibank_balancer, ibank, "Автоматически перенаправляет пользвотеля на работающий ЦОД")
+Rel(ibank, ibank_db, "Чтение данных о счетах пользователя")
+Rel(ibank, ibank_dep, "Запрос списка депозитов и персональных ставок")
+Rel(ibank_dep, ibank_dep_db, "Чтение/запись списка депозитов и персональных ставок из БД")
+Rel(ibank_dep, kafka, "Отправка кода подтвреждения в очередь уведомлений")
+Rel(ibank_dep, kafka, "Чтение очереди сообщений о ставках")
+Rel(sms, kafka, "Проверка очереди уведомлений")
+Rel(sms, client, "Уведомления и коды подверждения")
+Rel(abs_rate, kafka, "Публикация актуальных ставок по расписанию")
+
+Rel(ibank_dep, kafka, "Отправка заявки на открытие депозита")
+Rel(abs, kafka, "Чтение очереди заявок на депозиты")
+Rel(dep_manager, abs, "Обрабатывает и подтверждает заявку")
+Rel(abs, kafka, "Отправка сообщения пользователю о статусе заявки")
+
+Rel(credit_manager, abs, "Актуализирует данные по ставкам")
+Rel(abs, abs_rate, "Запись/чтение данных по ставкам")
+Rel(abs_rate, abs_rate_db, "Запись/чтение данных по ставкам в/из БД")
+Rel(abs, abs_db, "Запись/чтение данных по счетам клиентов в/из БД")
+
+
+@enduml
