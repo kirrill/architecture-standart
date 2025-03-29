@@ -1,0 +1,28 @@
+@startuml
+title Диаграмма контекста: MVP для подачи заявки на депозит через сайт и интернет-банк
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Component.puml
+
+Person(client, "Клиент", "" )
+Person(call_manager, "Сотрудник кол-центра")
+Person(call_p_manager, "Сотрудник партнерского кол-центра")
+Person(credit_manager, "Сотрудник бэк-офиса", "Кредитование")
+
+System(call, "Система кол-центра")
+System_Ext(call_p, "Система партнерского кол-центра")
+System(SFTP, "SFTP-сервер")
+System(abs, "АБС")
+
+
+Rel(client, call_manager, "Звонит в банк для уточнения ставок")
+Rel(client, call_p_manager, "Звонит в банк для уточнения ставок")
+Rel(call_manager, call, "Проверяет актуальные ставки в системе")
+Rel(call_p_manager, call_p, "Фиксирует данные звонка")
+Rel(call_p_manager, SFTP, "Проверяет актуальные ставки на SFTP-сервере")
+Rel(credit_manager, abs, "Актуализирует данные по ставкам")
+Rel(abs, call, "Отправляет информацию по ставкам")
+Rel(abs, SFTP, "Отправляет информацию по ставкам в виде файла")
+
+@enduml

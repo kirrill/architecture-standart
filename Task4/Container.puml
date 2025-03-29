@@ -1,0 +1,56 @@
+
+@startuml
+title title Диаграмма контекста: MVP для подачи заявки на депозит через сайт и интернет-банк
+
+top to bottom direction
+
+!includeurl https://raw.githubusercontent.com/RicardoNiepel/C4-PlantUML/master/C4_Container.puml
+
+Person(call_manager, "Сотрудник кол-центра")
+Person(call_p_manager, "Сотрудник партнерского кол-центра")
+Person(credit_manager, "Сотрудник бэк-офиса", "Кредитование")
+
+
+System_Boundary(abs_system, "АБС") {
+
+    Container(abs, "Десктопное приложение АБС", "Dephi", "Ведение данных о пользователях и состоянии их счетов")
+    ContainerDb(abs_db, "БД десктопа", "Oracle", "Хранение данных о пользователях и состоянии их счетов")
+
+    Container(abs_rate, "Сервис ведения ставок", "Java", "Ведение ставок по депозитам и кредитам")
+
+    ContainerDb(abs_rate_db, "База ставок", "Oracle", "Хранение актуальных ставок")
+}
+
+System_Boundary(call, "Система кол-центра") {
+
+    Container(call_front, "Интерфейс системы кол-центра", "React.js", "Ведение ставок по депозитам и кредитам")
+    Container(call_back, "Микросервисы бэкенда системы кол-центра", "Java Spring Boot", "Ведение ставок по депозитам и кредитам")
+    ContainerDb(call_db, "База системы кол-центра", "PostgreSQL", "")
+    
+    Container(call_rate, "Сервис получения ставок", "Java Spring Boot", "Загрузка актуальных ставок")
+}
+
+System(kafka, "Брокер сообщений", "Apache Kafka")
+System(SFTP, "SFTP-сервер", "SFTP")
+System_Ext(call_p, "Система партнерского кол-центра")
+
+Rel(call_manager, call_front, "Проверяет актуальные ставки в системе")
+
+Rel(call_front, call_back, "Получение служебной информации")
+Rel(call_back, call_db, "Чтение/запись служебной информации")
+Rel(call_front, call_rate, "Запрос актуальных ставок")
+Rel(call_rate, kafka, "Читает очередь сообщений с актуальными ставками")
+Rel(call_rate, call_db, "Чтение/запись информации по ставкам в БД")
+Rel(call_p_manager, call_p, "Фиксирует данные звонка")
+Rel(call_p_manager, SFTP, "Проверяет актуальные ставки на SFTP-сервере")
+
+
+Rel(abs_rate, kafka, "Публикация актуальных ставок по расписанию")
+Rel(abs_rate, SFTP, "Публикация актуальных ставок по расписанию в виде CSV/XLSX")
+
+Rel(credit_manager, abs, "Актуализирует данные по ставкам")
+Rel(abs, abs_rate, "Запись/чтение данных по ставкам")
+
+
+
+@enduml
